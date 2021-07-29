@@ -2,68 +2,54 @@ import rospy
 from std_msgs.msg import String
 from pytimedinput import timedInput
 
+from the_mainest.srv import Give, GiveResponse
 
-def talker():
-    pub = rospy.Publisher('/command_from_human', String, queue_size=1)
+
+class CVCommander(object):
+
+    def __init__(self) -> None:
+        super().__init__()
+        
+        self.mode = 'inference'
+
+        self.mode_pub = rospy.Publisher('/command_from_human', String, queue_size=1)
+        rospy.Service('/give', Give, self.commander_handler)
+
+    def commander_handler(self, req):
+        rospy.loginfo(f"Select working mode for segmentation algorithm: from `{self.mode}` to `{req.mode}`")
+        
+        self.mode = req.mode
+
+        # TODO how is it work?
+        # if 'train' in self.mode:
+        #     rospy.loginfo(f"train mode! Enter ")
+        #     userText, timedOut = timedInput('', timeOut=15)
+        #     if(timedOut):
+        #         rospy.loginfo('changing mode to inference')
+        #         self.mode = 'inference'
+        #     else:
+        #         self.mode = userText
+
+        self.mode_pub.publish(self.mode)
+    
+        return GiveResponse(True)
+
+    def spin(self):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            rate.sleep()
+
+
+def main():
     rospy.init_node('commands_cl', anonymous=False)
 
-    rate = rospy.Rate(10)
-    mode = 'inference'
-    while not rospy.is_shutdown():
-        print('enter working mode for segmentation algorithm:')
-        if 'train' in mode:
-            userText, timedOut = timedInput(
-                '', timeOut=15)
-            if(timedOut):
-                print('changing mode to inference')
-                mode = 'inference'
-            else:
-                mode = userText
-        else:
-            mode = input()
-        pub.publish(mode)
-        rate.sleep()
+    cv_commander = CVCommander()
+    
+    try:
+        cv_commander.spin()
+    except rospy.ROSInterruptException as e:
+        rospy.logerr(e)
 
 
 if __name__ == '__main__':
-    try:
-        talker()
-    except rospy.ROSInterruptException:
-        pass
-
-
-# class CV:
-
-#     def __init__(self) -> None:
-#         self.hri_srv = rospy.Service()
-
-#         self.classificator = Classificator()
-#         self.traner = Trainer()
-
-#         self.state = 'INIT'
-
-#     def hri_handler(self, req):
-#         if req.int8 == 1:
-#             self.state = 'C'
-#         elif req.int8 == 2:
-#             self.state = 'T'
-#         else:
-#             self.state = 'ERROR'
-
-    # def image_callback(self, msg):
-    #     self.cv_image = ....
-
-    # def spin(self):
-
-    #     rate = rospy.Rate(30)
-    #     while not rospy.is_shutdown():
-
-    #         if self.state == 'C':
-    #             pairs_list, image, masked_image = self.classificator.do(self.cv_image)
-    #             self.masked_rgbd_pub.publish(masked_image)
-    #         elif self.state == 'T':
-    #             self.taining.do()
-
-    #         rate.sleep()
-
-# HW -> API -> ros_API -> user_stuff
+    main()
