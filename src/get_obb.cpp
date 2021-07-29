@@ -68,13 +68,11 @@ class segmentPC
 
     }
 
-    bool obb_arr_service_handler(the_mainest::ObbArr::Request &req, the_mainest::ObbArr::Response &res) {
+    void obb_arr_service_handler(the_mainest::ObbArr::Request &req, the_mainest::ObbArr::Response &res) {
         
         for (int i = 0; i < out_array1.size(); ++i) {
             res.data.push_back(out_array1[i]);
         }
-
-        return True;
     }
 
     void sub_callback(const PointCloud::ConstPtr& msg)

@@ -66,3 +66,26 @@ In the command_node user can enter one of the following commands:
 3. In give mode the image is segmented and the coordinates of bouding box of a desired object are sent once to a topic ```/obb_array```. Once the "give" command was sent, the arraay is sent continously in topic until new "give" command is sent. 
 
 The topic ```/obb_array``` has float32 one-dimensional array representing a pose of the bounding box in the followong format: [major_vector, middle_vector, mass_center, dimensions] (in total 12 elements). Major vector represents X-axis, middle vector - Y-axis, dimensions - size of bounding box in a coordinate system, which axes are the major vector, middle vector and a vector maden by a cross product of two first ones. 
+
+## Usage [advanced]
+
+1. Call the service `/give` of type `the_mainest/Give.srv`
+
+```
+std_msgs/String mode
+---
+```
+
+where `mode` in [`give obj`], `obj` you can see from the topic `/segmented_view` (or something like this)
+
+2. Wait a few moments
+
+3. Call the service `/obb_arr_srv` of type `the_mainest/ObbArr.srv`
+
+```
+std_msgs/Empty empty
+---
+std_msgs/Float32MultiArray data
+```
+
+where `data` is 12 numbers.
