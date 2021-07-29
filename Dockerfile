@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu18.04
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     apt-utils \
@@ -51,7 +51,9 @@ RUN wget https://bootstrap.pypa.io/get-pip.py && \
 # RUN python3 -m pip install --upgrade pip==3.8.5
 
 RUN pip3 install tensorboard cmake   # cmake from apt-get is too old
-RUN pip3 install Pillow==8.2.0 numpy==1.18.5 torch==1.8.1 torchvision==0.9.1 -f https://download.pytorch.org/whl/cu102/torch_stable.html
+# RUN pip3 install Pillow==8.2.0 numpy==1.18.5 torch==1.8.1 torchvision==0.9.1 -f https://download.pytorch.org/whl/cu112/torch_stable.html
+
+RUN pip3 install Pillow==8.2.0 numpy==1.18.5 torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
 
 RUN pip install 'git+https://github.com/facebookresearch/fvcore' opencv-python==4.5.2.54
 # install detectron2
@@ -104,3 +106,10 @@ RUN apt-get install ros-melodic-pcl-ros ros-melodic-image-pipeline -y
 
 RUN pip3 install albumentations
 
+# RUN echo "export ROS_IP=192.168.0.213" >> ~/.bashrc && \
+#     echo "export ROS_MASTER_URI=http://192.168.0.213:11311" >> ~/.bashrc
+
+RUN echo "export ROS_IP=192.168.88.190" >> ~/.bashrc && \
+    echo "export ROS_MASTER_URI=http://192.168.88.190:11311" >> ~/.bashrc
+
+RUN echo "source /ws/devel/setup.bash" >> ~/.bashrc

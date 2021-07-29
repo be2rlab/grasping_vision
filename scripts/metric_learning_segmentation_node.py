@@ -33,6 +33,7 @@ import numpy as np
 import re
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from scipy.spatial.distance import euclidean
 
 torch.set_grad_enabled(False)
 
@@ -41,8 +42,10 @@ torch.set_grad_enabled(False)
 
 lock = threading.Lock()
 freq = 100
-conf_thresh = 0.8
-min_dist_thresh = 0.2
+# conf_thresh = 0.8
+conf_thresh = 0.3
+# min_dist_thresh = 0.25
+min_dist_thresh = 0.6
 
 
 class ImageListener:
@@ -79,8 +82,16 @@ class ImageListener:
         rgb_sub = message_filters.Subscriber('/camera/color/image_raw',
                                              Image, queue_size=10)
 
-        depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw',
-                                               Image, queue_size=10)
+        # try:
+        #     msg = rospy.wait_for_message('/camera/aligned_depth_to_color/image_raw', Image, 10)
+        # except rospy.exceptions.ROSException:
+        #     pass                                     
+
+        # depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, queue_size=10)
+        # depth_sub = message_filters.Subscriber('/camera/depth/image_raw',Image, queue_size=10)
+        depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, queue_size=10)
+
+
 
         rospy.Subscriber('/command_from_human',
                          String, self.callback_mode)
@@ -94,14 +105,14 @@ class ImageListener:
         trunk_file = 'models/trunk_best1.pth'
 
 
-        self.embedder = image_embedder(trunk_file=trunk_file, emb_file=emb_file, emb_size=emb_size)
+        # self.embedder = image_embedder(trunk_file=trunk_file, emb_file=emb_file, emb_size=emb_size)
 
-        self.classifier = knn_torch(
-            datafile='datafiles/14_07_data_aug5.pth', knn_size=20)
-
-        # self.embedder = dino_wrapper()
         # self.classifier = knn_torch(
-        #     datafile='datafiles/test_data_own_dino.pth', knn_size=20)
+        #     datafile='datafiles/14_07_data_aug5.pth', knn_size=20)
+
+        self.embedder = dino_wrapper()
+        self.classifier = knn_torch(
+            datafile='datafiles/test_data_own_dino.pth', knn_size=20)
 
 
         ts = message_filters.ApproximateTimeSynchronizer(
@@ -164,6 +175,9 @@ class ImageListener:
 
         # print(instances.pred_masks.shape)
 
+        # kernel_sz = 21
+        # kernel = np.ones((kernel_sz, kernel_sz), 'uint8')
+
         for box, mask in zip(instances.pred_boxes, instances.pred_masks):
             # get masked images
             x1, y1, x2, y2 = box.round().long()
@@ -174,7 +188,10 @@ class ImageListener:
 
             cur_mask = np.zeros((image.shape[:-1]), dtype=np.uint8)
             cur_mask[y1:y2, x1:x2] = (mask_rs + 0.5).astype(int)
-            
+
+
+            # cur_mask = cv.erode(cur_mask, kernel)
+
 
             image_masked = cv.bitwise_and(image, image, mask=cur_mask)
 
@@ -214,7 +231,7 @@ class ImageListener:
             im_shape, boxes.cpu().numpy())
 
         # augment masked images before passing to embedder
-        imgs = [self.transforms(image=images_masked[center_idx])['image'] for _ in range(5)]
+        imgs = [self.transforms(image=images_masked[center_idx])['image'] for _ in range(3)]
             
         
         features = self.embedder(imgs)
@@ -371,8 +388,8 @@ class ImageListener:
                             cv.drawContours(image_segmented, cntrs, -
                                             1, c, 2)
                             # if confidence is less than the threshold, don't draw label and confidence
-                            if min_dist > min_dist_thresh or conf < conf_thresh:
-                                continue               
+                            # if min_dist > min_dist_thresh or conf < conf_thresh:
+                            #     continue               
                             # draw bounding box
                             pts = box.detach().cpu().long()
                             cv.rectangle(image_segmented, (int(pts[0]), int(pts[1])),
@@ -383,6 +400,10 @@ class ImageListener:
                             pt = (int(pt[0]), int(pt[1]))
                             cv.putText(image_segmented, f'{cl} {conf:.2f} {min_dist:.2f}', pt,
                                     cv.FONT_HERSHEY_SIMPLEX, 0.8, c, 2)
+                            
+                            # rospy.logwarn(cl)
+
+                        # rospy.logwarn(' ')
 
                         mask = get_one_mask(
                             boxes.cpu().int().numpy(), pred_masks, image).astype(np.uint8)
@@ -401,7 +422,7 @@ class ImageListener:
                 if classes:
 
                     # threshold predictions
-                    class_idxs = [idx for idx, (cl, conf, dist) in enumerate(zip(classes, confs, dists)) if (conf > 0.8 and dist < 0.2)]
+                    class_idxs = [idx for idx, (cl, conf, dist) in enumerate(zip(classes, confs, dists)) if (conf > conf_thresh and dist < min_dist_thresh)]
                     high_propb_classes = [classes[i] for i in class_idxs]
                     # rospy.logwarn(classes)
 
@@ -486,6 +507,7 @@ if __name__ == '__main__':
 
             # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cpu_time_total', row_limit=10))
             # exit()
+            # rospy.logwarn('aaaaa')
             rate.sleep()
     finally:
         cv.destroyAllWindows()

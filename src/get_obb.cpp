@@ -8,6 +8,7 @@
 #include "sensor_msgs/CameraInfo.h"
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Float32MultiArray.h>
+#include <grasping_vision/ObbArr.h>
 
 // PCL
 #include <pcl/filters/passthrough.h>
@@ -53,13 +54,27 @@ class segmentPC
     PointCloud stored_pc;
     bool receive_msg = false;
 
-    public:
+    ros::ServiceServer obb_arr_service;
+    std_msgs::Float32MultiArray out_array1;
+
+  public:
     segmentPC(ros::NodeHandle *nh)
     {
         sub = nh->subscribe<PointCloud>("/points_masked", 1, &segmentPC::sub_callback, this);
-        pub = nh->advertise<std_msgs::Float32MultiArray> ("/obb_array", 1);
+        pub = nh->advertise<std_msgs::Float32MultiArray> ("/obb_array", 10);
+
+        obb_arr_service = n.advertiseService("/obb_arr_srv", &segmentPC::obb_arr_service_handler, this);
         printf("Init completed!");
 
+    }
+
+    bool obb_arr_service_handler(grasping_vision::ObbArr::Request &req, grasping_vision::ObbArr::Response &res) {
+        
+        for (int i = 0; i < out_array1.size(); ++i) {
+            res.data.push_back(out_array1[i]);
+        }
+
+        return True;
     }
 
     void sub_callback(const PointCloud::ConstPtr& msg)
@@ -186,9 +201,9 @@ class segmentPC
             Eigen::VectorXf vec_joined(major_vector.size() + middle_vector.size() + mass_center.size() + dims.size());
             vec_joined << major_vector, middle_vector, mass_center, dims;
             
-            std_msgs::Float32MultiArray out_array1;
-            for(int i=0; i<vec_joined.size(); i++)
+            for(int i=0; i<vec_joined.size(); i++) {
                 out_array1.data.push_back((vec_joined)[i]);
+            }
 
             pub.publish(out_array1);
                 // cout << (*vec)[i];
@@ -223,7 +238,7 @@ class segmentPC
         // pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(cur_cloud);
         // viewer->addPointCloud<pcl::PointXYZRGB> (cur_cloud, rgb, "sample cloud");  
 
-    }
+        }
 };
 
 int main(int argc, char** argv)
