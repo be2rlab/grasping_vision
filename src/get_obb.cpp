@@ -63,21 +63,25 @@ class segmentPC
         sub = nh->subscribe<PointCloud>("/points_masked", 1, &segmentPC::sub_callback, this);
         pub = nh->advertise<std_msgs::Float32MultiArray> ("/obb_array", 10);
 
-        obb_arr_service = n.advertiseService("/obb_arr_srv", &segmentPC::obb_arr_service_handler, this);
+        obb_arr_service = nh->advertiseService("/obb_arr_srv", &segmentPC::obb_arr_service_handler, this);
         printf("Init completed!");
 
     }
 
-    void obb_arr_service_handler(the_mainest::ObbArr::Request &req, the_mainest::ObbArr::Response &res) {
-        
-        for (int i = 0; i < out_array1.size(); ++i) {
-            res.data.push_back(out_array1[i]);
+    bool obb_arr_service_handler(the_mainest::ObbArr::Request &req, the_mainest::ObbArr::Response &res) {
+
+        ROS_INFO("BBOX is: %f", out_array1.data.size());
+
+        for (int i = 0; i < out_array1.data.size(); ++i) {
+            res.data.data.push_back(out_array1.data[i]);
         }
+        out_array1.data.clear();
+
+        return true;
     }
 
     void sub_callback(const PointCloud::ConstPtr& msg)
     {
-        // std::cout <<"received" << std::endl;
         pcl::copyPointCloud(*msg, stored_pc);
         receive_msg = true;
     }
@@ -199,6 +203,7 @@ class segmentPC
             Eigen::VectorXf vec_joined(major_vector.size() + middle_vector.size() + mass_center.size() + dims.size());
             vec_joined << major_vector, middle_vector, mass_center, dims;
             
+            out_array1.data.clear();
             for(int i=0; i<vec_joined.size(); i++) {
                 out_array1.data.push_back((vec_joined)[i]);
             }

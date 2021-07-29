@@ -18,7 +18,8 @@ class CVCommander(object):
     def commander_handler(self, req):
         rospy.loginfo(f"Select working mode for segmentation algorithm: from `{self.mode}` to `{req.mode}`")
         
-        self.mode = req.mode
+        self.mode = req.mode.data
+        rospy.loginfo(self.mode)
 
         # TODO how is it work?
         # if 'train' in self.mode:
@@ -32,7 +33,7 @@ class CVCommander(object):
 
         self.mode_pub.publish(self.mode)
     
-        return GiveResponse(True)
+        return []
 
     def spin(self):
         rate = rospy.Rate(10)
