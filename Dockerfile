@@ -114,4 +114,4 @@ RUN apt-get install ros-melodic-geometry-msgs ros-melodic-std-msgs -y
 RUN echo "export ROS_IP=192.168.88.190" >> ~/.bashrc && \
     echo "export ROS_MASTER_URI=http://192.168.88.190:11311" >> ~/.bashrc
 
-# RUN echo "source /ws/devel/setup.bash" >> ~/.bashrc
+RUN echo "source /ws/devel/setup.bash --extend" >> ~/.bashrc

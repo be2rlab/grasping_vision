@@ -12,7 +12,7 @@ class CVCommander(object):
         
         self.mode = 'inference'
 
-        self.mode_pub = rospy.Publisher('/command_from_human', String, queue_size=1)
+        self.mode_pub = rospy.Publisher('/command_from_human', String, queue_size=10)
         rospy.Service('/give', Give, self.commander_handler)
 
     def commander_handler(self, req):
